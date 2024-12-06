@@ -2,7 +2,6 @@ package table_test
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 	"testing"
 
@@ -557,7 +556,6 @@ func TestTable_Contains(t *testing.T) {
 	for _, test := range variadicTests {
 		t.Run(test.name, func(t *testing.T) {
 			if result := test.fn(test.types...); result != test.expectResult {
-				log.Println(test.types, "yo")
 				t.Errorf("%s() == %v, expected %v", test.name, result, test.expectResult)
 			}
 		})
@@ -611,7 +609,11 @@ func mergeTableLayouts(tableOne, tableTwo table.TableSetter, transferIndexes []i
 }
 
 func validateIndexes(t *testing.T, ei table.EntryIndex) {
-	for i, entry := range ei.Entries() {
+	for i := 0; ; i++ {
+		entry, err := ei.Entry(i)
+		if err != nil {
+			break
+		}
 		if entry.ID() != table.EntryID(i+1) && entry.ID() != 0 {
 			t.Errorf("Expected EntryID at index %d to be %d, but got %d", i, i+1, entry.ID())
 		}

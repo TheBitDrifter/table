@@ -21,11 +21,12 @@ type Entry interface {
 }
 
 type EntryIndex interface {
-	Entries() []Entry
+	Entry(idx int) (Entry, error)
 	NewEntries(count, previousTableLength int, tbl Table) ([]Entry, error)
 	UpdateIndex(EntryID, int) error
 	RecycleEntries(...EntryID) error
 	Reset() error
+	Entries() []Entry
 	Recyclable() []Entry
 }
 

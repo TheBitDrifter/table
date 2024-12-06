@@ -8,8 +8,8 @@ var _ EntryIndex = &entryIndex{}
 
 type entryIndex struct {
 	currEntryID EntryID
-	entries     []Entry
-	recyclable  []Entry
+	entries     []entry
+	recyclable  []entry
 }
 
 func (ei *entryIndex) NewEntries(n, start int, tbl Table) ([]Entry, error) {
@@ -47,8 +47,15 @@ func (ei *entryIndex) NewEntries(n, start int, tbl Table) ([]Entry, error) {
 	return newEntries, nil
 }
 
-func (ei *entryIndex) Entries() []Entry {
-	return ei.entries
+func (ei *entryIndex) Entry(i int) (Entry, error) {
+	if i < 0 || i >= len(ei.entries) {
+		return nil, AccessError{Index: i, UpperBound: len(ei.entries)}
+	}
+	entry := ei.entries[i]
+	if entry.id == 0 {
+		return nil, InvalidEntryAccessError{}
+	}
+	return entry, nil
 }
 
 func (ei *entryIndex) UpdateIndex(id EntryID, rowIndex int) error {
@@ -61,6 +68,7 @@ func (ei *entryIndex) UpdateIndex(id EntryID, rowIndex int) error {
 		id:       e.ID(),
 		recycled: e.Recycled(),
 		index:    rowIndex,
+		table:    e.table,
 	}
 	ei.entries[entryIndex] = newEntry
 	return nil
@@ -103,6 +111,18 @@ func (ei *entryIndex) Reset() error {
 	return nil
 }
 
+func (ei *entryIndex) Entries() []Entry {
+	entriesAsInterface := make([]Entry, len(ei.entries))
+	for i, en := range ei.entries {
+		entriesAsInterface[i] = en
+	}
+	return entriesAsInterface
+}
+
 func (ei *entryIndex) Recyclable() []Entry {
-	return ei.recyclable
+	recyclableEntriesAsInterface := make([]Entry, len(ei.recyclable))
+	for i, en := range ei.recyclable {
+		recyclableEntriesAsInterface[i] = en
+	}
+	return recyclableEntriesAsInterface
 }

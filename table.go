@@ -66,21 +66,12 @@ func newTable(
 	return tbl, nil
 }
 
-func (tbl *quickTable) Entry(n int) (Entry, error) {
-	if n < 0 || n >= len(tbl.entryIDs) {
-		return nil, AccessError{Index: n, UpperBound: len(tbl.entryIDs)}
+func (tbl *quickTable) Entry(tableIndex int) (Entry, error) {
+	if tableIndex < 0 || tableIndex >= len(tbl.entryIDs) {
+		return nil, AccessError{Index: tableIndex, UpperBound: len(tbl.entryIDs)}
 	}
-	entries := tbl.entryIndex.Entries()
-	index := int(tbl.entryIDs[n]) - 1
-
-	if index < 0 || index >= len(entries) {
-		return nil, AccessError{Index: index, UpperBound: len(entries)}
-	}
-	entry := entries[index]
-	if entry.ID() == 0 {
-		return nil, InvalidEntryAccessError{}
-	}
-	return entries[index], nil
+	entryIndex := int(tbl.entryIDs[tableIndex]) - 1
+	return tbl.entryIndex.Entry(entryIndex)
 }
 
 func (tbl *quickTable) NewEntries(n int) ([]Entry, error) {
