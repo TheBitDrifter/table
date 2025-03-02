@@ -134,6 +134,7 @@ func (tbl *quickTable) TransferEntries(
 ) error {
 	indexes = numbers_util.UniqueInts(indexes)
 	n := len(indexes)
+	otherLenOriginal := other.Length()
 
 	if n <= 0 {
 		return BatchOperationError{Count: n}
@@ -167,7 +168,7 @@ func (tbl *quickTable) TransferEntries(
 		entryIDs[i] = tbl.entryIDs[idx]
 	}
 	err := tbl.entryIndex.RecycleEntries(entryIDs...)
-	_, err = other.NewEntries(n)
+	newEntries, err := other.NewEntries(n)
 	if err != nil {
 		return err
 	}
@@ -189,6 +190,10 @@ func (tbl *quickTable) TransferEntries(
 		return err
 	}
 	tbl.popEntries(n, false)
+	for i, en := range newEntries {
+		tbl.entryIndex.UpdateIndex(en.ID(), otherLenOriginal+i)
+	}
+
 	return nil
 }
 
@@ -374,25 +379,6 @@ func (tbl *quickTable) sharedElementTypesWith(other Table) []ElementType {
 	return sharedElements
 }
 
-func (tbl *quickTable) swapEntries(i, j int) {
-	if i < 0 || i >= tbl.len || j < 0 || j >= tbl.len {
-		panic(fmt.Sprintf("swap columns bound error i: %d, j: %d, len: %d", i, j, tbl.len))
-	}
-	for _, row := range tbl.rows {
-		if !row.CanAddr() {
-			continue
-		}
-		copyI := row.get(i)
-		row.set(i, row.get(j))
-
-		copyAsElement := copyI
-		row.set(j, copyAsElement)
-	}
-	tbl.entryIDs[i], tbl.entryIDs[j] = tbl.entryIDs[j], tbl.entryIDs[i]
-	tbl.entryIndex.UpdateIndex(tbl.entryIDs[i], i)
-	tbl.entryIndex.UpdateIndex(tbl.entryIDs[j], j)
-}
-
 func (tbl *quickTable) popEntries(n int, recycle bool) []EntryID {
 	if n > tbl.len || n <= 0 {
 		panic(fmt.Sprintf("cannot pop %d, table len: %d", n, tbl.len))
@@ -411,7 +397,6 @@ func (tbl *quickTable) popEntries(n int, recycle bool) []EntryID {
 func (tbl *quickTable) prepForPopDeletion(indices ...int) (int, error) {
 	sortedUnique := numbers_util.UniqueInts(indices)
 	n := len(sortedUnique)
-
 	if n <= 0 {
 		return 0, BatchOperationError{Count: n}
 	}
@@ -420,16 +405,46 @@ func (tbl *quickTable) prepForPopDeletion(indices ...int) (int, error) {
 	}
 	defer tbl.rowCache.cacheRows(tbl)
 
+	// Validate indices first
 	sortedDescending := numbers_util.DescendingInts(sortedUnique)
 	for _, idx := range sortedDescending {
 		if idx < 0 || idx >= tbl.len {
 			return 0, AccessError{Index: idx, UpperBound: tbl.len}
 		}
 	}
-	for i, idx := range sortedDescending {
-		tbl.swapEntries(idx, tbl.len-1-i)
+
+	endPos := tbl.len - 1
+	for _, idx := range sortedDescending {
+		// Skip if:
+		// 1. Index is already in position (idx == endPos)
+		// 2. Index is already beyond our current swap position
+		if idx >= endPos {
+			endPos--
+			continue
+		}
+		tbl.swapEntries(idx, endPos)
+		endPos--
 	}
 	return n, nil
+}
+
+func (tbl *quickTable) swapEntries(i, j int) {
+	if i < 0 || i >= tbl.len || j < 0 || j >= tbl.len {
+		panic(fmt.Sprintf("swap columns bound error i: %d, j: %d, len: %d", i, j, tbl.len))
+	}
+	for _, row := range tbl.rows {
+		if !row.CanAddr() {
+			continue
+		}
+		copyI := row.get(i)
+		row.set(i, row.get(j))
+
+		copyAsElement := copyI
+		row.set(j, copyAsElement)
+	}
+	tbl.entryIDs[i], tbl.entryIDs[j] = tbl.entryIDs[j], tbl.entryIDs[i]
+	tbl.entryIndex.UpdateIndex(tbl.entryIDs[i], i)
+	tbl.entryIndex.UpdateIndex(tbl.entryIDs[j], j)
 }
 
 func (tbl *quickTable) hasEvents() bool {

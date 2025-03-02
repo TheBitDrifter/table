@@ -15,6 +15,7 @@ func (accessor Accessor[T]) Get(idx int, table Table) *T {
 	tbl := table.(*quickTable)
 	cachedRow := tbl.unsafeCache[accessor.assertedSchema(tbl).RowIndexForID(accessor.elementTypeID)]
 	var zero T
+
 	offset := uint32(unsafe.Sizeof(zero)) * uint32(idx)
 	return (*T)(unsafe.Add(cachedRow, offset))
 }
