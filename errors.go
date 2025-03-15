@@ -5,7 +5,6 @@ import (
 	"strings"
 )
 
-// Access--------------------------------------------------------------------------------------------------------------
 type (
 	AccessError struct {
 		Index      int
@@ -35,7 +34,6 @@ func (e InvalidEntryAccessError) Error() string {
 	return "cannot access invalid entry"
 }
 
-// Batch operation-----------------------------------------------------------------------------------------------------
 type (
 	BatchOperationError struct {
 		Count int
@@ -55,14 +53,12 @@ func (e BatchDeletionError) Error() string {
 	return fmt.Sprintf("batch deletion error: amount %d is invalid for capacity %d", e.Count, e.Capacity)
 }
 
-// Transfer------------------------------------------------------------------------------------------------------------
 type TransferEntryIndexMismatchError struct{}
 
 func (e TransferEntryIndexMismatchError) Error() string {
 	return "transfer error entry index mismatch"
 }
 
-// Instantiation-------------------------------------------------------------------------------------------------------
 type TableInstantiationNilSchemaError struct{}
 
 func (e TableInstantiationNilSchemaError) Error() string {
